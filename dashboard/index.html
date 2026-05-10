@@ -3,96 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PersonalWealth - 个人资产管理仪表板</title>
+    <title>📊 PersonalWealth - 个人资产统计</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <!-- 顶部导航 -->
+        <!-- Header -->
         <header class="header">
-            <div class="header-content">
-                <h1>💰 PersonalWealth</h1>
-                <p>个人多账户资产统一管理平台</p>
-            </div>
+            <h1>📊 PersonalWealth</h1>
+            <p>个人资产统计系统</p>
         </header>
 
-        <!-- 总资产卡片 -->
-        <section class="cards">
-            <div class="card total-card">
-                <div class="card-title">总资产</div>
-                <div class="card-value" id="totalAssets">¥0.00</div>
-                <div class="card-detail">更新时间: <span id="updateTime">--:--</span></div>
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-label">总资产</div>
+                <div class="stat-value">¥<span id="totalWealth">0.00</span></div>
+                <div class="stat-subtitle">CNY</div>
             </div>
-            <div class="card">
-                <div class="card-title">股票资产</div>
-                <div class="card-value" id="stockAssets">¥0.00</div>
+            <div class="stat-card">
+                <div class="stat-label">股票</div>
+                <div class="stat-value">¥<span id="stockValue">0.00</span></div>
+                <div class="stat-subtitle">含A股、美股</div>
             </div>
-            <div class="card">
-                <div class="card-title">基金资产</div>
-                <div class="card-value" id="fundAssets">¥0.00</div>
+            <div class="stat-card">
+                <div class="stat-label">基金</div>
+                <div class="stat-value">¥<span id="fundValue">0.00</span></div>
+                <div class="stat-subtitle">含货币基金</div>
             </div>
-            <div class="card">
-                <div class="card-title">现金余额</div>
-                <div class="card-value" id="cashAssets">¥0.00</div>
+            <div class="stat-card">
+                <div class="stat-label">现金</div>
+                <div class="stat-value">¥<span id="cashValue">0.00</span></div>
+                <div class="stat-subtitle">钱包 + 活期</div>
             </div>
-            <div class="card">
-                <div class="card-title">加密货币</div>
-                <div class="card-value" id="cryptoAssets">¥0.00</div>
+            <div class="stat-card">
+                <div class="stat-label">加密</div>
+                <div class="stat-value">¥<span id="cryptoValue">0.00</span></div>
+                <div class="stat-subtitle">BTC + ETH</div>
             </div>
-        </section>
+        </div>
 
-        <!-- 图表区域 -->
-        <section class="charts">
-            <!-- 账户分布 -->
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <!-- Trend Chart -->
             <div class="chart-container">
-                <h2>📱 账户分布</h2>
-                <canvas id="accountChart"></canvas>
-            </div>
-
-            <!-- 资产类型分布 -->
-            <div class="chart-container">
-                <h2>📦 资产类型分布</h2>
-                <canvas id="categoryChart"></canvas>
-            </div>
-        </section>
-
-        <!-- 趋势图 -->
-        <section class="charts">
-            <div class="chart-container full">
-                <h2>📈 30天资产趋势</h2>
+                <h2>📈 资产趋势 (30天)</h2>
                 <canvas id="trendChart"></canvas>
             </div>
-        </section>
 
-        <!-- 详细资产表 -->
-        <section class="table-section">
-            <h2>📋 详细资产清单</h2>
-            <div class="table-wrapper">
-                <table class="assets-table">
-                    <thead>
-                        <tr>
-                            <th>账户</th>
-                            <th>资产类型</th>
-                            <th>标的代码</th>
-                            <th>持仓数量</th>
-                            <th>成本价</th>
-                            <th>市值 (¥)</th>
-                            <th>货币</th>
-                        </tr>
-                    </thead>
-                    <tbody id="assetsTableBody">
-                        <tr>
-                            <td colspan="7" style="text-align: center; color: #999;">加载中...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Distribution Charts -->
+            <div class="charts-row">
+                <div class="chart-container half">
+                    <h2>🏦 账户分布</h2>
+                    <canvas id="accountChart"></canvas>
+                </div>
+                <div class="chart-container half">
+                    <h2>📦 资产类型分布</h2>
+                    <canvas id="categoryChart"></canvas>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <!-- 页脚 -->
+        <!-- Assets Table -->
+        <div class="table-section">
+            <h2>📋 资产明细</h2>
+            <table id="assetsTable" class="assets-table">
+                <thead>
+                    <tr>
+                        <th>账户</th>
+                        <th>类型</th>
+                        <th>标的</th>
+                        <th>数量</th>
+                        <th>成本价</th>
+                        <th>当前价</th>
+                        <th>估值 (CNY)</th>
+                        <th>盈亏</th>
+                        <th>收益率</th>
+                    </tr>
+                </thead>
+                <tbody id="assetsTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
         <footer class="footer">
-            <p>PersonalWealth v1.0 | <a href="https://github.com/Birdxuan/PersonalWealth" target="_blank">GitHub</a></p>
+            <p>💡 提示: 数据由本地 SQLite 数据库提供，支持离线查看</p>
+            <p>🔄 每天午夜自动更新数据快照</p>
         </footer>
     </div>
 

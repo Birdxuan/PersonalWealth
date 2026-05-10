@@ -1,40 +1,105 @@
 #!/usr/bin/env python3
-"""初始化数据库脚本"""
+"""Initialize the database with schema"""
 
-import sys
+import sqlite3
+from src.config import DB_PATH, ACCOUNTS, ASSET_CATEGORIES
 import os
 
-# 添加项目根目录到 Python 路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Create data directory if it doesn't exist
+os.makedirs('data', exist_ok=True)
 
-from src.db import Database
-from src.config import ACCOUNTS, ASSET_CATEGORIES
+connection = sqlite3.connect(DB_PATH)
+cursor = connection.cursor()
 
-def init_database():
-    """初始化数据库和基础数据"""
-    
-    # 创建数据库和表
-    db = Database()
-    db.init_database()
-    
-    # 添加账户
-    print("\n📱 添加账户...")
-    for account_name, account_type in ACCOUNTS.items():
-        if db.add_account(account_name, account_type):
-            print(f"  ✅ {account_name}")
-        else:
-            print(f"  ⚠️  {account_name} 已存在")
-    
-    # 添加资产类型
-    print("\n📦 添加资产类型...")
-    for category in ASSET_CATEGORIES:
-        if db.add_category(category):
-            print(f"  ✅ {category}")
-        else:
-            print(f"  ⚠️  {category} 已存在")
-    
-    print("\n✅ 数据库初始化完成！")
-    print("\n下一步: python scripts/add_sample_data.py")
+# Create accounts table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    type TEXT NOT NULL,
+    currency TEXT DEFAULT 'CNY',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+''')
 
-if __name__ == '__main__':
-    init_database()
+# Create asset_categories table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS asset_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+''')
+
+# Create assets table (core holdings)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS assets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account TEXT NOT NULL,
+    category TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    avg_cost REAL NOT NULL,
+    currency TEXT DEFAULT 'CNY',
+    updated_time TEXT,
+    UNIQUE(account, symbol),
+    FOREIGN KEY(account) REFERENCES accounts(name),
+    FOREIGN KEY(category) REFERENCES asset_categories(name)
+)
+''')
+
+# Create transactions table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    category TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    price REAL NOT NULL,
+    fee REAL DEFAULT 0,
+    time TEXT,
+    FOREIGN KEY(account) REFERENCES accounts(name)
+)
+''')
+
+# Create daily_snapshot table (for trend analysis)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS daily_snapshot (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    total_cny REAL NOT NULL,
+    stock_cny REAL DEFAULT 0,
+    fund_cny REAL DEFAULT 0,
+    cash_cny REAL DEFAULT 0,
+    crypto_cny REAL DEFAULT 0,
+    date TEXT UNIQUE NOT NULL
+)
+''')
+
+connection.commit()
+
+# Insert default accounts
+for account in ACCOUNTS:
+    try:
+        cursor.execute(
+            'INSERT INTO accounts (name, type, currency) VALUES (?, ?, ?)',
+            (account['name'], account['type'], account['currency'])
+        )
+    except sqlite3.IntegrityError:
+        pass  # Account already exists
+
+# Insert default categories
+for category in ASSET_CATEGORIES:
+    try:
+        cursor.execute(
+            'INSERT INTO asset_categories (name) VALUES (?)',
+            (category,)
+        )
+    except sqlite3.IntegrityError:
+        pass  # Category already exists
+
+connection.commit()
+connection.close()
+
+print(f'✅ Database initialized at: {DB_PATH}')

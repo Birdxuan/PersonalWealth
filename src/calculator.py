@@ -1,139 +1,127 @@
-"""资产计算和分析模块 - PersonalWealth"""
+"""Asset calculation and analysis"""
 
+from typing import Dict, List, Tuple
 from src.db import Database
-from src.config import USD_TO_CNY
-from collections import defaultdict
+from src.config import ASSET_PRICES, EXCHANGE_RATE
 
 class Calculator:
-    """资产计算和分析类"""
+    """Asset calculation and analysis"""
     
-    def __init__(self, db_path=None):
-        self.db = Database(db_path)
+    def __init__(self, db: Database):
+        self.db = db
+        self.exchange_rate = EXCHANGE_RATE['USD_TO_CNY']
     
-    def convert_to_cny(self, amount, currency='CNY'):
-        """转换为人民币"""
-        if currency == 'USD':
-            return amount * USD_TO_CNY
-        return amount
-    
-    def calculate_total_assets(self):
-        """计算总资产"""
-        assets = self.db.get_assets()
+    def get_asset_value(self, symbol: str, quantity: float, currency: str) -> float:
+        """Calculate asset value in CNY"""
+        price = ASSET_PRICES.get(symbol, 1.0)
+        value = price * quantity
         
-        result = {
-            'total_cny': 0,
-            'stock_cny': 0,
-            'fund_cny': 0,
-            'cash_cny': 0,
-            'crypto_cny': 0
-        }
+        if currency == 'USD':
+            value *= self.exchange_rate
+        
+        return value
+    
+    def get_total_wealth(self) -> float:
+        """Calculate total wealth in CNY"""
+        assets = self.db.get_assets()
+        total = 0.0
         
         for asset in assets:
-            value = asset['quantity'] * asset['avg_cost']
-            value_cny = self.convert_to_cny(value, asset['currency'])
+            value = self.get_asset_value(
+                asset['symbol'],
+                asset['quantity'],
+                asset['currency']
+            )
+            total += value
+        
+        return round(total, 2)
+    
+    def get_wealth_by_account(self) -> Dict[str, float]:
+        """Get wealth distribution by account"""
+        accounts = self.db.get_accounts()
+        result = {}
+        
+        for account in accounts:
+            assets = self.db.get_assets(account=account['name'])
+            total = 0.0
             
-            # 按资产类型分类
-            if asset['category'] == '股票':
-                result['stock_cny'] += value_cny
-            elif asset['category'] == '基金':
-                result['fund_cny'] += value_cny
-            elif asset['category'] == '现金':
-                result['cash_cny'] += value_cny
-            elif asset['category'] == '加密货币':
-                result['crypto_cny'] += value_cny
+            for asset in assets:
+                value = self.get_asset_value(
+                    asset['symbol'],
+                    asset['quantity'],
+                    asset['currency']
+                )
+                total += value
             
-            result['total_cny'] += value_cny
+            result[account['name']] = round(total, 2)
         
         return result
     
-    def get_assets_by_account(self):
-        """按账户统计资产"""
+    def get_wealth_by_category(self) -> Dict[str, float]:
+        """Get wealth distribution by asset category"""
+        categories = self.db.get_categories()
+        result = {}
+        
+        for category in categories:
+            result[category['name']] = 0.0
+        
         assets = self.db.get_assets()
-        result = defaultdict(float)
-        
         for asset in assets:
-            value = asset['quantity'] * asset['avg_cost']
-            value_cny = self.convert_to_cny(value, asset['currency'])
-            result[asset['account']] += value_cny
+            value = self.get_asset_value(
+                asset['symbol'],
+                asset['quantity'],
+                asset['currency']
+            )
+            result[asset['category']] = result.get(asset['category'], 0.0) + value
         
-        return dict(sorted(result.items(), key=lambda x: x[1], reverse=True))
+        # Round all values
+        return {k: round(v, 2) for k, v in result.items()}
     
-    def get_assets_by_category(self):
-        """按资产类型统计资产"""
+    def get_asset_details(self) -> List[Dict]:
+        """Get detailed asset information"""
         assets = self.db.get_assets()
-        result = defaultdict(float)
+        result = []
         
         for asset in assets:
-            value = asset['quantity'] * asset['avg_cost']
-            value_cny = self.convert_to_cny(value, asset['currency'])
-            result[asset['category']] += value_cny
-        
-        return dict(sorted(result.items(), key=lambda x: x[1], reverse=True))
-    
-    def get_account_detail(self, account):
-        """获取账户详情"""
-        assets = self.db.get_assets(account)
-        result = {
-            'account': account,
-            'total_cny': 0,
-            'assets': []
-        }
-        
-        for asset in assets:
-            value = asset['quantity'] * asset['avg_cost']
-            value_cny = self.convert_to_cny(value, asset['currency'])
+            value = self.get_asset_value(
+                asset['symbol'],
+                asset['quantity'],
+                asset['currency']
+            )
             
-            result['assets'].append({
-                'symbol': asset['symbol'],
+            profit = value - (asset['avg_cost'] * asset['quantity'])
+            if asset['currency'] == 'USD':
+                profit = profit / self.exchange_rate  # Convert back for calculation
+            
+            profit_rate = (profit / (asset['avg_cost'] * asset['quantity'])) * 100 if asset['avg_cost'] > 0 else 0
+            
+            result.append({
+                'account': asset['account'],
                 'category': asset['category'],
+                'symbol': asset['symbol'],
                 'quantity': asset['quantity'],
                 'avg_cost': asset['avg_cost'],
-                'value_cny': value_cny,
+                'current_price': ASSET_PRICES.get(asset['symbol'], asset['avg_cost']),
+                'value_cny': round(value, 2),
+                'profit': round(profit, 2),
+                'profit_rate': round(profit_rate, 2),
                 'currency': asset['currency']
             })
-            
-            result['total_cny'] += value_cny
         
         return result
     
-    def get_summary(self):
-        """获取资产总结"""
-        total = self.calculate_total_assets()
-        by_account = self.get_assets_by_account()
-        by_category = self.get_assets_by_category()
+    def get_statistics(self) -> Dict:
+        """Get comprehensive statistics"""
+        wealth_by_category = self.get_wealth_by_category()
+        wealth_by_account = self.get_wealth_by_account()
+        total = self.get_total_wealth()
         
         return {
-            'total': total,
-            'by_account': by_account,
-            'by_category': by_category,
-            'snapshots': self.db.get_snapshots(30)
+            'total_wealth': total,
+            'by_account': wealth_by_account,
+            'by_category': wealth_by_category,
+            'stock_value': wealth_by_category.get('股票', 0),
+            'fund_value': wealth_by_category.get('基金', 0),
+            'cash_value': wealth_by_category.get('现金', 0),
+            'crypto_value': wealth_by_category.get('加密货币', 0),
         }
-    
-    def print_summary(self):
-        """打印资产总结（命令行）"""
-        summary = self.get_summary()
-        total = summary['total']
-        by_account = summary['by_account']
-        by_category = summary['by_category']
-        
-        print("\n" + "="*50)
-        print("📊 个人资产统计")
-        print("="*50)
-        
-        print(f"\n💰 总资产: ¥{total['total_cny']:.2f}")
-        print(f"  - 股票: ¥{total['stock_cny']:.2f}")
-        print(f"  - 基金: ¥{total['fund_cny']:.2f}")
-        print(f"  - 现金: ¥{total['cash_cny']:.2f}")
-        print(f"  - 加密货币: ¥{total['crypto_cny']:.2f}")
-        
-        print("\n📱 账户分布:")
-        for account, value in by_account.items():
-            percentage = (value / total['total_cny'] * 100) if total['total_cny'] > 0 else 0
-            print(f"  - {account}: ¥{value:.2f} ({percentage:.1f}%)")
-        
-        print("\n📦 资产类型分布:")
-        for category, value in by_category.items():
-            percentage = (value / total['total_cny'] * 100) if total['total_cny'] > 0 else 0
-            print(f"  - {category}: ¥{value:.2f} ({percentage:.1f}%)")
-        
-        print("\n" + "="*50 + "\n")

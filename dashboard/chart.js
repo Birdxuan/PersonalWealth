@@ -1,234 +1,272 @@
 /**
- * PersonalWealth 仪表板脚本
- * 加载数据并绘制图表
+ * Dashboard chart and data loading logic
+ * Using Chart.js library
  */
 
-let accountChart = null;
-let categoryChart = null;
-let trendChart = null;
-
-// 模拟数据（实际应该从后端 API 获取）
-const mockData = {
-    total: {
-        total_cny: 219420.00,
-        stock_cny: 48000,
-        fund_cny: 10000,
-        cash_cny: 26000,
-        crypto_cny: 135420
+// Parse database data (simulated with sample data)
+const sampleData = {
+    accounts: [
+        { name: '微信', value: 10000 },
+        { name: '支付宝', value: 11800 },
+        { name: 'A股', value: 29000 },
+        { name: '盈透(IBKR)', value: 28900 },
+        { name: '众安银行', value: 21300 },
+        { name: '其他', value: 42000 }
+    ],
+    categories: {
+        '现金': 15800,
+        '基金': 11800,
+        '股票': 79000,
+        'ETH': 25000,
+        'BTC': 42000
     },
-    by_account: {
-        '微信': 10000,
-        '支付宝': 20000,
-        'A股': 48000,
-        'IBKR(盈透)': 46020,
-        '众安银行': 6000,
-        '其他': 89400
-    },
-    by_category: {
-        '现金': 26000,
-        '基金': 10000,
-        '股票': 48000,
-        '加密货币': 135420
-    },
-    snapshots: generateMockSnapshots()
+    trend: [
+        { date: '5-11', value: 195000 },
+        { date: '5-12', value: 195500 },
+        { date: '5-13', value: 195800 },
+        { date: '5-14', value: 196200 },
+        { date: '5-15', value: 196800 },
+        { date: '5-16', value: 197200 },
+        { date: '5-17', value: 197800 },
+        { date: '5-18', value: 198300 },
+        { date: '5-19', value: 198800 },
+        { date: '5-20', value: 199200 }
+    ]
 };
 
-// 生成模拟快照数据
-function generateMockSnapshots() {
-    const snapshots = [];
-    const baseValue = 210000;
-    const today = new Date();
+let trendChart, accountChart, categoryChart;
 
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        // 模拟每日波动
-        const fluctuation = 1 + (i * 0.01) + (Math.random() - 0.5) * 0.02;
-        snapshots.push({
-            date: dateStr,
-            total_cny: baseValue * fluctuation
-        });
-    }
-    return snapshots;
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    initializeCharts();
+});
+
+// Load dashboard data
+function loadDashboardData() {
+    // Calculate totals
+    const totalWealth = sampleData.accounts.reduce((sum, acc) => sum + acc.value, 0);
+    const stockValue = 79000;
+    const fundValue = 11800;
+    const cashValue = 15800;
+    const cryptoValue = 42000 + 25000;
+
+    // Update stat cards
+    document.getElementById('totalWealth').textContent = formatNumber(totalWealth);
+    document.getElementById('stockValue').textContent = formatNumber(stockValue);
+    document.getElementById('fundValue').textContent = formatNumber(fundValue);
+    document.getElementById('cashValue').textContent = formatNumber(cashValue);
+    document.getElementById('cryptoValue').textContent = formatNumber(cryptoValue);
+
+    // Load assets table
+    loadAssetsTable();
 }
 
-// 更新总资产卡片
-function updateTotalCards() {
-    const total = mockData.total;
-    const now = new Date();
-    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                    now.getMinutes().toString().padStart(2, '0');
-
-    document.getElementById('totalAssets').textContent = 
-        '¥' + total.total_cny.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('stockAssets').textContent = 
-        '¥' + total.stock_cny.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('fundAssets').textContent = 
-        '¥' + total.fund_cny.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('cashAssets').textContent = 
-        '¥' + total.cash_cny.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('cryptoAssets').textContent = 
-        '¥' + total.crypto_cny.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('updateTime').textContent = timeStr;
+// Format numbers with thousands separator
+function formatNumber(num) {
+    return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// 绘制账户分布饼图
-function drawAccountChart() {
-    const ctx = document.getElementById('accountChart').getContext('2d');
-    const accounts = Object.keys(mockData.by_account);
-    const values = Object.values(mockData.by_account);
-    const colors = [
-        '#09B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280'
+// Load assets table data
+function loadAssetsTable() {
+    const tableBody = document.getElementById('assetsTableBody');
+    const assets = [
+        {
+            account: '微信',
+            category: '现金',
+            symbol: 'CNY',
+            quantity: 10000,
+            avgCost: 1.0,
+            currentPrice: 1.0,
+            value: 10000,
+            profit: 0,
+            profitRate: 0
+        },
+        {
+            account: '支付宝',
+            category: '余额宝',
+            symbol: 'CNY',
+            quantity: 8000,
+            avgCost: 1.0,
+            currentPrice: 1.0,
+            value: 8000,
+            profit: 0,
+            profitRate: 0
+        },
+        {
+            account: '支付宝',
+            category: '基金',
+            symbol: '易方达沪深300',
+            quantity: 1000,
+            avgCost: 3.5,
+            currentPrice: 3.8,
+            value: 3800,
+            profit: 300,
+            profitRate: 8.57
+        },
+        {
+            account: 'A股',
+            category: '股票',
+            symbol: '茅台',
+            quantity: 10,
+            avgCost: 2000,
+            currentPrice: 2500,
+            value: 25000,
+            profit: 5000,
+            profitRate: 25.0
+        },
+        {
+            account: 'A股',
+            category: 'ETF',
+            symbol: '510300',
+            quantity: 500,
+            avgCost: 4.0,
+            currentPrice: 4.8,
+            value: 2400,
+            profit: 400,
+            profitRate: 20.0
+        },
+        {
+            account: '盈透(IBKR)',
+            category: '股票',
+            symbol: 'AAPL',
+            quantity: 100,
+            avgCost: 120,
+            currentPrice: 180,
+            value: 12780,
+            profit: 6000,
+            profitRate: 50.0
+        },
+        {
+            account: '盈透(IBKR)',
+            category: '股票',
+            symbol: 'TSLA',
+            quantity: 50,
+            avgCost: 200,
+            currentPrice: 250,
+            value: 8900,
+            profit: 2500,
+            profitRate: 25.0
+        },
+        {
+            account: '盈透(IBKR)',
+            category: '现金',
+            symbol: 'USD',
+            quantity: 5000,
+            avgCost: 1.0,
+            currentPrice: 7.1,
+            value: 35500,
+            profit: 0,
+            profitRate: 0
+        },
+        {
+            account: '众安银行',
+            category: '现金',
+            symbol: 'USD',
+            quantity: 3000,
+            avgCost: 1.0,
+            currentPrice: 7.1,
+            value: 21300,
+            profit: 0,
+            profitRate: 0
+        },
+        {
+            account: '其他',
+            category: '加密货币',
+            symbol: 'BTC',
+            quantity: 0.1,
+            avgCost: 300000,
+            currentPrice: 420000,
+            value: 42000,
+            profit: 12000,
+            profitRate: 40.0
+        },
+        {
+            account: '其他',
+            category: '加密货币',
+            symbol: 'ETH',
+            quantity: 1.0,
+            avgCost: 20000,
+            currentPrice: 25000,
+            value: 25000,
+            profit: 5000,
+            profitRate: 25.0
+        }
     ];
 
-    accountChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: accounts,
-            datasets: [{
-                data: values,
-                backgroundColor: colors,
-                borderColor: '#fff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: { size: 12 },
-                        padding: 15
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const total = values.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.raw / total) * 100).toFixed(1);
-                            return context.label + ': ¥' + 
-                                context.raw.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) + 
-                                ' (' + percentage + '%)';
-                        }
-                    }
-                }
-            }
-        }
-    });
+    tableBody.innerHTML = assets.map(asset => `
+        <tr>
+            <td><strong>${asset.account}</strong></td>
+            <td>${asset.category}</td>
+            <td>${asset.symbol}</td>
+            <td>${asset.quantity.toFixed(4)}</td>
+            <td>¥${formatNumber(asset.avgCost)}</td>
+            <td>¥${formatNumber(asset.currentPrice)}</td>
+            <td>¥${formatNumber(asset.value)}</td>
+            <td style="color: ${asset.profit >= 0 ? '#28a745' : '#dc3545'}">
+                ${asset.profit >= 0 ? '+' : ''}¥${formatNumber(asset.profit)}
+            </td>
+            <td style="color: ${asset.profitRate >= 0 ? '#28a745' : '#dc3545'}">
+                ${asset.profitRate >= 0 ? '+' : ''}${asset.profitRate.toFixed(2)}%
+            </td>
+        </tr>
+    `).join('');
 }
 
-// 绘制资产类型分布饼图
-function drawCategoryChart() {
-    const ctx = document.getElementById('categoryChart').getContext('2d');
-    const categories = Object.keys(mockData.by_category);
-    const values = Object.values(mockData.by_category);
-    const colors = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
-
-    categoryChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: categories,
-            datasets: [{
-                data: values,
-                backgroundColor: colors,
-                borderColor: '#fff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: { size: 12 },
-                        padding: 15
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const total = values.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.raw / total) * 100).toFixed(1);
-                            return context.label + ': ¥' + 
-                                context.raw.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) + 
-                                ' (' + percentage + '%)';
-                        }
-                    }
-                }
-            }
-        }
-    });
+// Initialize all charts
+function initializeCharts() {
+    initTrendChart();
+    initAccountChart();
+    initCategoryChart();
 }
 
-// 绘制趋势曲线
-function drawTrendChart() {
+// Trend chart (line chart)
+function initTrendChart() {
     const ctx = document.getElementById('trendChart').getContext('2d');
-    const snapshots = mockData.snapshots;
-    const dates = snapshots.map(s => {
-        const date = new Date(s.date);
-        return (date.getMonth() + 1) + '/' + date.getDate();
-    });
-    const values = snapshots.map(s => s.total_cny);
+    const dates = sampleData.trend.map(d => d.date);
+    const values = sampleData.trend.map(d => d.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
 
     trendChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: dates,
             datasets: [{
-                label: '总资产',
+                label: '总资产 (CNY)',
                 data: values,
                 borderColor: '#667eea',
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                borderWidth: 3,
+                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
-                pointRadius: 4,
+                pointRadius: 5,
                 pointBackgroundColor: '#667eea',
                 pointBorderColor: '#fff',
-                pointBorderWidth: 2
+                pointBorderWidth: 2,
+                pointHoverRadius: 7
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
             plugins: {
                 legend: {
                     display: true,
                     labels: {
-                        font: { size: 12 },
-                        usePointStyle: true
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: { size: 12 },
-                    bodyFont: { size: 12 },
-                    callbacks: {
-                        label: function(context) {
-                            return '¥' + context.raw.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
-                        }
+                        font: { size: 12, weight: 'bold' }
                     }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: false,
+                    min: minValue * 0.99,
+                    max: maxValue * 1.01,
                     ticks: {
                         callback: function(value) {
-                            return '¥' + (value / 1000).toFixed(0) + 'k';
+                            return '¥' + formatNumber(value);
                         }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
                     }
                 }
             }
@@ -236,54 +274,103 @@ function drawTrendChart() {
     });
 }
 
-// 更新资产表格
-function updateAssetsTable() {
-    const mockAssets = [
-        { account: '微信', category: '现金', symbol: 'CNY', quantity: 5000, avg_cost: 1.0, value: 5000, currency: 'CNY' },
-        { account: '微信', category: '基金', symbol: '易方达沪深300', quantity: 1000, avg_cost: 5.0, value: 5000, currency: 'CNY' },
-        { account: '支付宝', category: '现金', symbol: 'CNY', quantity: 15000, avg_cost: 1.0, value: 15000, currency: 'CNY' },
-        { account: '支付宝', category: '基金', symbol: '余额宝', quantity: 5000, avg_cost: 1.0, value: 5000, currency: 'CNY' },
-        { account: 'A股', category: '股票', symbol: '贵州茅台', quantity: 10, avg_cost: 1800, value: 18000, currency: 'CNY' },
-        { account: 'A股', category: 'ETF', symbol: '沪深300', quantity: 100, avg_cost: 300, value: 30000, currency: 'CNY' },
-        { account: 'IBKR(盈透)', category: '股票', symbol: 'AAPL', quantity: 10, avg_cost: 150, value: 10620, currency: 'USD' },
-        { account: 'IBKR(盈透)', category: '现金', symbol: 'USD', quantity: 5000, avg_cost: 1.0, value: 35400, currency: 'USD' },
-        { account: '众安银行', category: '现金', symbol: 'CNY', quantity: 6000, avg_cost: 1.0, value: 6000, currency: 'CNY' },
-        { account: '其他', category: '加密货币', symbol: 'BTC', quantity: 0.5, avg_cost: 40000, value: 14200, currency: 'USD' },
-        { account: '其他', category: '加密货币', symbol: 'ETH', quantity: 5, avg_cost: 2500, value: 88500, currency: 'USD' }
+// Account distribution chart (pie chart)
+function initAccountChart() {
+    const ctx = document.getElementById('accountChart').getContext('2d');
+    const labels = sampleData.accounts.map(a => a.name);
+    const values = sampleData.accounts.map(a => a.value);
+    const colors = [
+        '#667eea',
+        '#764ba2',
+        '#f093fb',
+        '#4facfe',
+        '#00f2fe',
+        '#43e97b'
     ];
 
-    const tbody = document.getElementById('assetsTableBody');
-    tbody.innerHTML = '';
-
-    mockAssets.forEach(asset => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${asset.account}</td>
-            <td>${asset.category}</td>
-            <td>${asset.symbol}</td>
-            <td>${asset.quantity.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}</td>
-            <td>${asset.avg_cost.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}</td>
-            <td>¥${asset.value.toLocaleString('zh-CN', { maximumFractionDigits: 0 })}</td>
-            <td>${asset.currency}</td>
-        `;
-        tbody.appendChild(row);
+    accountChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 15,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `¥${formatNumber(value)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
-// 初始化页面
-function initDashboard() {
-    console.log('正在初始化仪表板...');
-    updateTotalCards();
-    drawAccountChart();
-    drawCategoryChart();
-    drawTrendChart();
-    updateAssetsTable();
-    console.log('✅ 仪表板初始化完成！');
-}
+// Category distribution chart (pie chart)
+function initCategoryChart() {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const labels = Object.keys(sampleData.categories);
+    const values = Object.values(sampleData.categories);
+    const colors = [
+        '#43e97b',
+        '#38f9d7',
+        '#fa709a',
+        '#fee140',
+        '#30b0fe'
+    ];
 
-// 页面加载完成后初始化
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDashboard);
-} else {
-    initDashboard();
+    categoryChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 15,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `¥${formatNumber(value)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
