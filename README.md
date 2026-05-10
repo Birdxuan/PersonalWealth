@@ -1,223 +1,420 @@
-# 💰 PersonalWealth
+# PersonalWealth 💰
 
-**个人多账户资产统一看板** - 一个实时的个人财富管理系统
+个人多账户、多资产统一管理系统（Personal Multi-Account Asset Management System）
 
-支持同时管理：微信、支付宝、A股、美股(IBKR)、美股(众安)、加密货币等多账户资产。
+## 📊 项目简介
 
-## 📊 核心功能
+PersonalWealth 是一个集合微信、支付宝、A股、美股(IBKR/众安)、加密货币等多个账户的**个人资产统一看板系统**。
 
-- ✅ **多账户集成** - 微信/支付宝/A股/美股/加密货币
-- ✅ **资产类型分类** - 现金/基金/股票/ETF等
-- ✅ **实时资产汇总** - 统一换算成人民币/美元
-- ✅ **资产结构分析** - 饼图展示资产分布
-- ✅ **历史曲线** - 追踪资产增长趋势
-- ✅ **每日快照** - 自动记录每日资产状态
-- ✅ **交易记录** - 保留完整的买卖交易历史
+不仅仅是记账工具，而是：
 
-## 🏗️ 项目结构
+- 📈 **实时资产可视化** - 清晰展示所有资产总额和分布
+- 📊 **智能分析** - 账户占比、资产类型分布、趋势变化
+- 💱 **自动汇率换算** - 美元自动转换为人民币
+- 📉 **历史追踪** - 每日快照记录，长期追踪资产变化
+- 🤖 **自动化** - 支持定时更新，GitHub Actions 集成
+
+---
+
+## 🗂️ 项目结构
 
 ```
 PersonalWealth/
-├── data/
-│   ├── wealth.db                 # SQLite数据库（自动创建）
-│   └── sample_data.json          # 示例数据
+├── src/
+│   ├── __init__.py
+│   ├── config.py           # 配置文件（汇率、账户等）
+│   ├── db.py               # 数据库操作模块
+│   └── calculator.py       # 资产计算和分析
 ├── scripts/
-│   ├── init_db.py                # 初始化数据库
-│   ├── sync_wealth.py            # 同步资产数据
-│   └── daily_snapshot.py         # 每日快照脚本
-├── frontend/
-│   ├── index.html                # 主页面
-│   ├── dashboard.html            # 资产看板
-│   └── assets/
-│       ├── style.css
-│       └── chart.js
-├── config/
-│   └── config.example.json       # 配置模板
-├── requirements.txt              # Python依赖
-└── README.md                     # 项目说明
+│   ├── init_db.py          # 初始化数据库
+│   ├── add_sample_data.py  # 添加示例数据
+│   └── daily_snapshot.py   # 每日快照脚本
+├── dashboard/
+│   ├── index.html          # 可视化仪表板
+│   ├── style.css           # 样式文件
+│   └── chart.js            # 前端逻辑
+├── data/
+│   └── wealth.db           # SQLite 数据库（自动生成）
+├── requirements.txt        # Python 依赖
+├── .gitignore             # Git 忽略
+└── README.md              # 本文件
 ```
+
+---
 
 ## 🚀 快速开始
 
-### 1. 克隆项目
+### 前置要求
 
-```bash
-git clone https://github.com/Birdxuan/PersonalWealth.git
-cd PersonalWealth
-```
+- Python 3.9+
+- pip
 
-### 2. 安装依赖
+### 1️⃣ 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 初始化数据库
+### 2️⃣ 初始化数据库
 
 ```bash
 python scripts/init_db.py
 ```
 
-### 4. 导入示例数据（可选）
+输出：
+```
+✅ 数据库初始化成功！
+✅ 表创建完成
+```
+
+### 3️⃣ 添加示例数据
 
 ```bash
-python scripts/sync_wealth.py --sample
+python scripts/add_sample_data.py
 ```
 
-### 5. 启动查看
-
-打开 `frontend/dashboard.html` 即可查看资产看板
-
-## 💻 数据结构
-
-### 数据库设计（SQLite）
-
-#### 1. 账户表 (accounts)
+输出：
 ```
-- id: 账户ID
-- name: 账户名称（微信/支付宝/IBKR等）
-- type: 账户类型（wallet/broker/bank）
-- currency: 货币单位（CNY/USD）
+✅ 示例数据添加成功！
+微信: ¥10,000 (现金 ¥5,000 + 基金 ¥5,000)
+支付宝: ¥20,000 (余额宝 ¥15,000 + 基金 ¥5,000)
+...
+总资产: ¥130,000
 ```
 
-#### 2. 资产类型表 (asset_categories)
-```
-- id: 分类ID
-- name: 分类名称（现金/基金/股票/ETF等）
-```
-
-#### 3. 资产持仓表 (assets)
-```
-- id: 资产ID
-- account: 账户名称
-- category: 资产分类
-- symbol: 标的代码（AAPL/BTC/易方达等）
-- quantity: 持仓数量
-- avg_cost: 成本价
-- currency: 货币单位
-- current_price: 当前价格
-- total_value: 总价值
-- updated_at: 更新时间
-```
-
-#### 4. 交易记录表 (transactions)
-```
-- id: 交易ID
-- account: 账户名称
-- symbol: 标的代码
-- type: 交易类型（buy/sell/deposit/withdraw）
-- quantity: 交易数量
-- price: 交易价格
-- fee: 手续费
-- created_at: 交易时间
-```
-
-#### 5. 每日快照表 (daily_snapshots)
-```
-- id: 快照ID
-- total_cny: 总资产(人民币)
-- total_usd: 总资产(美元)
-- cash_cny: 现金(人民币)
-- stock_cny: 股票(人民币)
-- fund_cny: 基金(人民币)
-- crypto_cny: 加密货币(人民币)
-- created_at: 快照时间
-```
-
-## 📈 使用场景
-
-### 场景1：查看当前总资产
-
-```python
-from scripts.sync_wealth import WealthManager
-
-wm = WealthManager()
-total = wm.get_total_wealth()
-print(f"总资产: {total['total_cny']} 元")
-```
-
-### 场景2：查看各账户资产分布
-
-```python
-breakdown = wm.get_account_breakdown()
-for account, value in breakdown.items():
-    print(f"{account}: {value} 元")
-```
-
-### 场景3：导入新资产
+### 4️⃣ 启动本地服务
 
 ```bash
-# 编辑 data/sample_data.json，然后执行
-python scripts/sync_wealth.py --import data/sample_data.json
+python -m http.server 8000
 ```
 
-## 🔄 自动化（Linux Crontab）
+### 5️⃣ 打开仪表板
 
-每天00:00自动记录资产快照：
-
-```bash
-0 0 * * * /usr/bin/python3 /path/to/PersonalWealth/scripts/daily_snapshot.py
+在浏览器打开：
+```
+http://localhost:8000/dashboard/index.html
 ```
 
-## 📊 前端功能
-
-### Dashboard 包含：
-
-- 📌 **总资产卡片** - 实时显示总资产
-- 📊 **资产分布饼图** - 各账户占比
-- 📈 **资产曲线图** - 30天/90天/1年趋势
-- 💼 **账户明细** - 各平台详细资产
-- 🎯 **目标追踪** - 投资目标进度
-
-## 🔐 隐私说明
-
-- 所有数据存储在本地 SQLite 数据库
-- 不上传到任何远程服务器
-- 支持 `.gitignore` 排除 `data/wealth.db`
-
-## 🛠️ 配置文件
-
-复制 `config/config.example.json` 并修改：
-
-```json
-{
-  "currency": {
-    "primary": "CNY",
-    "exchange_rate": {
-      "USD_CNY": 7.0
-    }
-  },
-  "accounts": [
-    {
-      "name": "微信",
-      "type": "wallet",
-      "currency": "CNY"
-    },
-    {
-      "name": "支付宝",
-      "type": "wallet",
-      "currency": "CNY"
-    }
-  ]
-}
-```
-
-## 📅 更新计划
-
-- [ ] V1 - 基础资产汇总和展示（当前）
-- [ ] V2 - Web API + 实时更新
-- [ ] V3 - 自动同步币安/Yahoo Finance/IBKR API
-- [ ] V4 - 投资分析和收益追踪
-- [ ] V5 - Docker 部署和云端同步
-
-## 🤝 贡献
-
-欢迎提交 Issue 或 PR 来改进这个项目！
-
-## 📝 License
-
-MIT License
+你将看到：
+- 📊 总资产金额
+- 🥧 账户分布饼图
+- 📦 资产类型分布
+- 📈 30天趋势曲线
+- 📋 详细资产表格
 
 ---
 
-**💡 提示**：这是一个个人金融工具，建议定期备份 `data/wealth.db` 文件。
+## 📚 核心功能
+
+### 1️⃣ 多账户支持
+
+已内置账户：
+
+| 账户 | 类型 | 支持资产 |
+|------|------|----------|
+| 微信 | wallet | 现金、基金、理财 |
+| 支付宝 | wallet | 现金、基金、理财 |
+| A股 | broker | 股票、ETF、基金 |
+| IBKR(盈透) | broker | 股票、ETF、现金 |
+| 众安银行 | bank | 现金、理财 |
+| 其他 | other | 加密货币、其他 |
+
+### 2️⃣ 多资产类型
+
+- 💵 **现金** - 钱包余额
+- 💹 **股票** - 个股持仓
+- 📈 **基金** - 基金产品
+- 📊 **ETF** - 交易所交易基金
+- 💎 **加密货币** - BTC、ETH等
+- 🏦 **理财产品** - 银行理财
+
+### 3️⃣ 智能计算
+
+- ✅ 自动汇率转换（美元 → 人民币）
+- ✅ 总资产计算
+- ✅ 账户占比分析
+- ✅ 资产类型分布
+- ✅ 持仓成本分析
+
+### 4️⃣ 数据持久化
+
+- ✅ SQLite 数据库存储
+- ✅ 每日快照记录
+- ✅ 交易历史追踪
+- ✅ 长期趋势分析
+
+---
+
+## 📊 数据库设计
+
+### 核心表结构
+
+#### 1. accounts（账户表）
+```sql
+id          INTEGER PRIMARY KEY
+name        TEXT              -- 微信/支付宝/IBKR等
+type        TEXT              -- wallet/broker/bank
+```
+
+#### 2. asset_categories（资产类型表）
+```sql
+id          INTEGER PRIMARY KEY
+name        TEXT              -- 现金/基金/股票等
+```
+
+#### 3. assets（资产持仓表）⭐核心表
+```sql
+id          INTEGER PRIMARY KEY
+account     TEXT              -- 所属账户
+category    TEXT              -- 资产类型
+symbol      TEXT              -- 标的代码
+quantity    REAL              -- 持仓数量
+avg_cost    REAL              -- 成本价
+currency    TEXT              -- 货币（CNY/USD）
+updated_at  TEXT              -- 更新时间
+```
+
+#### 4. transactions（交易记录表）
+```sql
+id          INTEGER PRIMARY KEY
+account     TEXT
+symbol      TEXT
+category    TEXT
+type        TEXT              -- buy/sell/deposit/redeem
+amount      REAL
+price       REAL
+fee         REAL
+time        TEXT
+```
+
+#### 5. daily_snapshot（每日快照表）
+```sql
+id          INTEGER PRIMARY KEY
+total_cny   REAL              -- 总资产(人民币)
+stock_cny   REAL              -- 股票(人民币)
+fund_cny    REAL              -- 基金(人民币)
+cash_cny    REAL              -- 现金(人民币)
+crypto_cny  REAL              -- 加密货币(人民币)
+date        TEXT              -- 日期
+```
+
+---
+
+## 🎯 核心 API
+
+### Python 模块使用
+
+#### 初始化数据库
+```python
+from src.db import Database
+
+db = Database('data/wealth.db')
+db.init_database()
+```
+
+#### 添加资产
+```python
+db.add_asset(
+    account='微信',
+    category='现金',
+    symbol='CNY',
+    quantity=5000,
+    avg_cost=1.0,
+    currency='CNY'
+)
+```
+
+#### 查询总资产
+```python
+from src.calculator import Calculator
+
+calc = Calculator('data/wealth.db')
+total = calc.calculate_total_assets()
+print(f"总资产: ¥{total['total_cny']:.2f}")
+```
+
+#### 获取账户分布
+```python
+by_account = calc.get_assets_by_account()
+print(by_account)
+# Output: {'微信': 10000, '支付宝': 20000, ...}
+```
+
+---
+
+## 🔧 配置说明
+
+编辑 `src/config.py` 自定义：
+
+```python
+# 汇率配置
+USD_TO_CNY = 7.08  # 美元兑人民币
+
+# 账户配置
+ACCOUNTS = {
+    'WeChat': 'wallet',
+    'Alipay': 'wallet',
+    'A-Stock': 'broker',
+    'IBKR': 'broker',
+    'ZhongAn': 'bank',
+    'Other': 'other'
+}
+
+# 资产类型
+ASSET_CATEGORIES = ['现金', '基金', '股票', 'ETF', '理财', '加密货币']
+```
+
+---
+
+## 📈 使用示例
+
+### 场景1：每天记录一次资产
+
+```bash
+# 更新资产数据
+python scripts/add_sample_data.py
+
+# 记录每日快照
+python scripts/daily_snapshot.py
+
+# 刷新网页查看最新数据
+# http://localhost:8000/dashboard/index.html
+```
+
+### 场景2：查看账户分布
+
+1. 打开仪表板
+2. 查看左侧 **账户分布饼图**
+3. 清晰看到每个账户占比
+
+### 场景3：分析资产类型
+
+1. 打开仪表板
+2. 查看右侧 **资产类型分布**
+3. 了解现金/股票/基金占比
+
+### 场景4：追踪长期趋势
+
+1. 每天自动运行 `daily_snapshot.py`
+2. 打开仪表板 **30天趋势图**
+3. 观察资产增长或回撤
+
+---
+
+## 🤖 自动化
+
+### GitHub Actions（可选）
+
+项目包含 `.github/workflows/update-dashboard.yml` 配置：
+
+- ⏰ 每天午夜自动运行
+- 🔄 自动更新数据
+- 📸 生成每日快照
+- 💾 自动提交到仓库
+
+启用方法：
+1. 在项目设置中启用 Actions
+2. 仓库会每天自动更新数据
+
+---
+
+## 🧩 如何添加新账户
+
+### 步骤1：编辑配置
+
+编辑 `src/config.py`：
+
+```python
+ACCOUNTS = {
+    'WeChat': 'wallet',
+    'Alipay': 'wallet',
+    'A-Stock': 'broker',
+    'IBKR': 'broker',
+    'ZhongAn': 'bank',
+    'Other': 'other',
+    'NewAccount': 'broker'  # 添加新账户
+}
+```
+
+### 步骤2：添加数据
+
+编辑 `scripts/add_sample_data.py`：
+
+```python
+db.add_asset(
+    account='NewAccount',
+    category='股票',
+    symbol='AAPL',
+    quantity=10,
+    avg_cost=150,
+    currency='USD'
+)
+```
+
+### 步骤3：重新生成数据
+
+```bash
+python scripts/init_db.py
+python scripts/add_sample_data.py
+```
+
+---
+
+## 🚀 进阶功能（V2 计划）
+
+- [ ] FastAPI 后端 REST API
+- [ ] 用户认证和权限
+- [ ] 实时行情接口（币安、雪球等）
+- [ ] A股/美股 自动同步
+- [ ] 定时任务服务（APScheduler）
+- [ ] 数据导入/导出（CSV）
+- [ ] 邮件/钉钉 定时推送
+- [ ] Docker 容器化
+- [ ] 云端部署（Vercel/Railway）
+- [ ] 手机响应式设计
+
+---
+
+## 💡 常见问题
+
+### Q1: 如何更新汇率？
+
+A: 编辑 `src/config.py` 中的 `USD_TO_CNY` 值，或集成实时汇率 API。
+
+### Q2: 数据存储在哪里？
+
+A: 所有数据存储在 `data/wealth.db` SQLite 数据库中。
+
+### Q3: 如何导出数据？
+
+A: 可以用 SQLite 工具直接打开 `.db` 文件，或编写脚本导出为 CSV。
+
+### Q4: 支持多用户吗？
+
+A: V1 不支持，V2 计划添加用户认证系统。
+
+### Q5: 性能如何？
+
+A: SQLite 支持 100万+ 条交易记录，足以满足个人使用。
+
+---
+
+## 📝 License
+
+MIT License - 自由使用和修改
+
+---
+
+## 🙏 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📞 联系方式
+
+GitHub: [@Birdxuan](https://github.com/Birdxuan)
+
+---
+
+**Happy Wealth Tracking! 🚀**
